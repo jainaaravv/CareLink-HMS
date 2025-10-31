@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(120deg, #d4fc79 0%, #96e6a1 100%);
+        }
+        .dashboard-card {
+            border-radius: 18px;
+            box-shadow: 0 2px 18px rgba(33,147,176,0.15);
+            margin-bottom: 2rem;
+        }
+        h2 {
+            color: #2193b0;
+            margin-bottom: 1rem;
+        }
+        .table th {
+            background-color: #2193b0;
+            color: white;
+        }
+        .btn-sm {
+            border-radius: 18px;
+        }
+    </style>
+</head>
+<body>
+     <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="container mt-3">
+          {% for category, message in messages %}
+            <div class="alert alert-{{category}} alert-dismissible fade show" role="alert">
+              {{message}}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    <div class="container py-5">
+
+        <div class="container py-3">
+  <input type="text" id="searchInput" class="form-control" placeholder="Search doctors, patients, appointments..." onkeyup="filterDashboard()">
+</div>
+
+
+        <!-- Stat cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm rounded mb-3">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Doctors</h5>
+                        <h1>{{ doctor_count }}</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm rounded mb-3">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Patients</h5>
+                        <h1>{{ patient_count }}</h1>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm rounded mb-3">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Appointments</h5>
+                        <h1>{{ appt_count }}</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card p-3 bg-white mb-4">
+  <h5>Upcoming Appointments</h5>
+  <table class="table table-sm table-hover">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Doctor</th>
+        <th>Patient</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for appt in upcoming_appointments %}
+      <tr>
+        <td>{{ appt[0] }}</td>
+        <td>{{ appt[1] }}</td>
+        <td>{{ appt[2] }}</td>
+        <td>{{ appt[3] }}</td>
+        <td>{{ appt[4] }}</td>
+        <td>{{ appt[5] }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center">No upcoming appointments</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+
+        <div class="dashboard-card p-4 bg-white">
+            <h2 class="text-center">Welcome, Admin</h2>
+
+            <!-- Add Doctor Button and Modal -->
+            <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#addDoctorModal">
+                Add Doctor
+            </button>
+            <div class="modal fade" id="addDoctorModal" tabindex="-1" aria-labelledby="addDoctorModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                <form method="POST" action="{{ url_for('add_doctor') }}">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addDoctorModalLabel">Add Doctor</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="text" class="form-control" name="password" required>
+                        </div>
+                        <div class="mb-3">
+                        <label for="specialization" class="form-label">Specialization</label>
+                        <select class="form-select" name="specialization" required>
+                        {% for dept in departments %}
+                          <option value="{{ dept[1] }}">{{ dept[1] }}</option>
+                        {% endfor %}
+                      </select>
+
+                        </div>
+                        <div class="mb-3">
+                        <label for="contact" class="form-label">Contact</label>
+                        <input type="text" class="form-control" name="contact">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Add Doctor</button>
+                    </div>
+                    </div>
+                </form>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('export_doctors') }}" 
+   class="btn btn-outline-primary btn-sm rounded-pill d-inline-flex align-items-center mb-2"
+   style="width: fit-content;">
+   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-download me-2" viewBox="0 0 16 16">
+     <path d="M.5 9.9V13a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9.9a.5.5 0 0 0-1 0V13a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V9.9a.5.5 0 0 0-1 0zm7.5-.9a.5.5 0 0 0 .5-.5V2.707l2.147 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7 2.707V8.5a.5.5 0 0 0 .5.5z"/>
+   </svg>
+   Doctors CSV
+</a>
+
+            <h5>Registered Doctors</h5>
+            <table class="table doctor-table table-hover align-middle mb-4">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name (Username)</th>
+            <th>Specialization</th>
+            <th>Contact</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        
+
+        {% for doc in doctors %}
+        <tr>
+            <td>{{ doc[0] }}</td>
+            <td>{{ doc[1] }}</td>
+            <td>{{ doc[2] }}</td>
+            <td>{{ doc[3] }}</td>
+            <td>
+              <button class="btn btn-sm btn-warning me-1" data-bs-toggle="modal" data-bs-target="#editDoctorModal{{doc[0]}}">Edit</button>
+              <form method="POST" action="{{ url_for('delete_doctor', doctor_id=doc[0]) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this doctor?')">Delete</button>
+              </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<!-- Add Department Button and Modal -->
+<button class="btn btn-primary mb-2" data-bs-toggle="modal" data-bs-target="#addDeptModal">
+    Add Department
+</button>
+<div class="modal fade" id="addDeptModal" tabindex="-1" aria-labelledby="addDeptModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('add_department') }}">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addDeptModalLabel">Add Department</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="dept_name" class="form-label">Department Name</label>
+            <input type="text" class="form-control" name="dept_name" required>
+          </div>
+          <div class="mb-3">
+            <label for="overview" class="form-label">Overview/Details</label>
+            <textarea class="form-control" name="overview"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+            <!-- Render all doctor modals just after table -->
+            {% for doc in doctors %}
+            <div class="modal fade" id="editDoctorModal{{doc[0]}}" tabindex="-1" aria-labelledby="editDoctorModalLabel{{doc[0]}}" aria-hidden="true">
+              <div class="modal-dialog">
+                <form method="POST" action="{{ url_for('edit_doctor', doctor_id=doc[0]) }}">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="editDoctorModalLabel{{doc[0]}}">Edit Doctor</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" value="{{ doc[1] }}" class="form-control" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Specialization</label>
+                        <input type="text" name="specialization" class="form-control" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Contact</label>
+                        <input type="text" name="contact" class="form-control">
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-warning">Save Changes</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+
+            <!-- Add Patient Button and Modal -->
+            <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                Add Patient
+            </button>
+            <div class="modal fade" id="addPatientModal" tabindex="-1" aria-labelledby="addPatientModalLabel" aria-hidden="true">
+              <div class="modal-dialog">
+                <form method="POST" action="{{ url_for('add_patient') }}">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="addPatientModalLabel">Add Patient</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" required>
+                      </div>
+                      <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="text" class="form-control" name="password" required>
+                      </div>
+                      <div class="mb-3">
+                        <label for="contact" class="form-label">Contact</label>
+                        <input type="text" class="form-control" name="contact">
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-success">Add Patient</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <a href="{{ url_for('export_patients') }}" 
+   class="btn btn-outline-success btn-sm rounded-pill d-inline-flex align-items-center mb-2"
+   style="width: fit-content;">
+   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-download me-2" viewBox="0 0 16 16">
+     <path d="M.5 9.9V13a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9.9a.5.5 0 0 0-1 0V13a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V9.9a.5.5 0 0 0-1 0zm7.5-.9a.5.5 0 0 0 .5-.5V2.707l2.147 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7 2.707V8.5a.5.5 0 0 0 .5.5z"/>
+   </svg>
+   Patients CSV
+</a>
+
+            <h5>Registered Patients</h5>
+            <table class="table patient-table table-hover align-middle">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name (Username)</th>
+            <th>Contact</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for pat in patients %}
+        <tr>
+            <td>{{ pat[0] }}</td>
+            <td>{{ pat[1] }}</td>
+            <td>{{ pat[2] }}</td>
+            <td>
+              <button class="btn btn-sm btn-warning me-1" data-bs-toggle="modal" data-bs-target="#editPatientModal{{pat[0]}}">Edit</button>
+              <form method="POST" action="{{ url_for('delete_patient', patient_id=pat[0]) }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this patient?')">Delete</button>
+              </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+            <!-- Render all patient modals just after table -->
+            {% for pat in patients %}
+            <div class="modal fade" id="editPatientModal{{pat[0]}}" tabindex="-1" aria-labelledby="editPatientModalLabel{{pat[0]}}" aria-hidden="true">
+              <div class="modal-dialog">
+                <form method="POST" action="{{ url_for('edit_patient', patient_id=pat[0]) }}">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="editPatientModalLabel{{pat[0]}}">Edit Patient</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" value="{{ pat[1] }}" class="form-control" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Contact</label>
+                        <input type="text" name="contact" class="form-control">
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-warning">Save Changes</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+            {% endfor %}
+
+            <!-- Add Appointment Button -->
+            <button class="btn btn-info mb-3" data-bs-toggle="modal" data-bs-target="#addAppointmentModal">
+                Add Appointment
+            </button>
+            <!-- Add Appointment Modal -->
+            <div class="modal fade" id="addAppointmentModal" tabindex="-1" aria-labelledby="addAppointmentModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                <form method="POST" action="{{ url_for('add_appointment') }}">
+                    <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addAppointmentModalLabel">Add Appointment</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                        <label class="form-label">Doctor</label>
+                        <select class="form-select" name="doctor_id" required>
+                            {% for doc in doctors %}
+                            <option value="{{ doc[0] }}">{{ doc[1] }}</option>
+                            {% endfor %}
+                        </select>
+                        </div>
+                        <div class="mb-3">
+                        <label class="form-label">Patient</label>
+                        <select class="form-select" name="patient_id" required>
+                            {% for pat in patients %}
+                            <option value="{{ pat[0] }}">{{ pat[1] }}</option>
+                            {% endfor %}
+                        </select>
+                        </div>
+                        <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-control" name="date" required>
+                        </div>
+                        <div class="mb-3">
+                        <label class="form-label">Time</label>
+                        <input type="time" class="form-control" name="time" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-info">Create Appointment</button>
+                    </div>
+                    </div>
+                </form>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="dashboard-card p-4 bg-white">
+            <a href="{{ url_for('export_appointments') }}" 
+   class="btn btn-outline-info btn-sm rounded-pill d-inline-flex align-items-center mb-2"
+   style="width: fit-content;">
+   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-download me-2" viewBox="0 0 16 16">
+     <path d="M.5 9.9V13a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9.9a.5.5 0 0 0-1 0V13a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V9.9a.5.5 0 0 0-1 0zm7.5-.9a.5.5 0 0 0 .5-.5V2.707l2.147 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7 2.707V8.5a.5.5 0 0 0 .5.5z"/>
+   </svg>
+   Appointments CSV
+</a>
+
+<h5>Hospital Departments</h5>
+<table class="table table-hover align-middle mb-4">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Overview</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dept in departments %}
+<tr>
+  <td>{{ dept[0] }}</td>
+  <td>{{ dept[1] }}</td>
+  <td>{{ dept[2] }}</td>
+</tr>
+{% endfor %}
+
+  </tbody>
+</table>
+
+
+            <h5>All Appointments</h5>
+           <table class="table appointment-table table-hover">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Doctor Name</th>
+      <th>Patient Name</th>
+      <th>Date</th>
+      <th>Time</th>
+      <th>Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for appt in appointments %}
+    <tr>
+      <td>{{ appt[0] }}</td>
+      <td>{{ appt[1] }}</td>
+      <td>{{ appt[2] }}</td>
+      <td>{{ appt[3] }}</td>
+      <td>{{ appt[4] }}</td>
+      <td>{{ appt[5] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+function filterDashboard() {
+  var input = document.getElementById("searchInput").value.toLowerCase();
+
+  function filterTable(selector) {
+    var rows = document.querySelectorAll(selector + " tbody tr");
+    rows.forEach(function(row) {
+      var text = row.textContent.toLowerCase();
+      row.style.display = text.indexOf(input) > -1 ? "" : "none";
+    });
+  }
+
+  filterTable(".doctor-table");
+  filterTable(".patient-table");
+  filterTable(".appointment-table");
+}
+</script>
+
+</body>
+</html>

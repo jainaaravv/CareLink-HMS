@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Patient Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2c3e50;
+        }
+        .dashboard-container {
+            margin: 40px auto;
+            max-width: 900px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(33, 147, 176, 0.2);
+            padding: 30px;
+        }
+        h2, h4 {
+            color: #2962ff;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 40px;
+        }
+        ul li {
+            background-color: #e3f2fd;
+            margin-bottom: 10px;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        ul li:hover {
+            background-color: #d5f3ff;
+        }
+        table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        thead tr {
+            background-color: #2962ff;
+            color: white;
+            font-weight: 700;
+        }
+        tbody tr:nth-child(odd) {
+            background-color: #f1f9ff;
+        }
+        tbody tr:hover {
+            background-color: #dbe9ff;
+        }
+        .no-appointments {
+            text-align: center;
+            color: #888;
+            padding: 20px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard-container">
+    <!-- Profile Card -->
+    <div class="d-flex align-items-center mb-4" style="gap:20px;">
+      <img src="{% if patient_pfp %}/static/patient_pfps/{{ patient_pfp }}{% else %}https://ui-avatars.com/api/?name={{ patient_name | urlencode }}&background=5fa8d3&color=fff&size=80{% endif %}"
+    class="rounded-circle shadow" width="80" height="80" alt="Profile">
+
+      <div>
+        <h2 class="mb-1">{{ patient_name }}</h2>
+        <div class="text-muted">Age: {{ patient_age }}</div>
+        <div class="text-muted">Contact: {{ patient_contact }}</div>
+        <a href="/edit_profile" class="btn btn-sm btn-outline-info mt-2">Edit Profile</a>
+      </div>
+      <a href="/logout" class="btn btn-outline-secondary ms-auto">Logout</a>
+    </div>
+
+    <!-- Appointment Booking Trigger -->
+    <button class="btn btn-primary mb-4" data-bs-toggle="modal" data-bs-target="#bookModal">
+      Book Appointment
+    </button>
+
+    <!-- Departments List (clickable) -->
+    <h4>Departments</h4>
+    <ul>
+      {% for dept in departments %}
+        <li class="dept-link" data-dept="{{ dept[0] }}">{{ dept[1] }}</li>
+      {% endfor %}
+    </ul>
+
+    <!-- Reminder Banner if appointment is soon -->
+    {% set reminder = None %}
+    {% for a in upcoming_appointments %}
+      {% if a[2] == current_date %}
+        {% set reminder = a %}
+      {% endif %}
+    {% endfor %}
+    {% if reminder %}
+    <div class="alert alert-warning">
+      <strong>Reminder:</strong> Appointment with Dr. {{ reminder[1] }} today at {{ reminder[3] }}!
+    </div>
+    {% endif %}
+
+    <!-- Upcoming Appointments -->
+    <h4>Upcoming Appointments</h4>
+    {% if upcoming_appointments %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th>ID</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appt in upcoming_appointments %}
+        <tr>
+          <td>{{ appt[0] }}</td>
+          <td>{{ appt[1] }}</td>
+          <td>{{ appt[2] }}</td>
+          <td>{{ appt[3] }}</td>
+          <td>
+            {% if appt[4] == 'Booked' %}
+              <span class="badge rounded-pill bg-primary">Booked</span>
+            {% elif appt[4] == 'Completed' %}
+              <span class="badge rounded-pill bg-success">Completed</span>
+            {% elif appt[4] == 'Cancelled' %}
+              <span class="badge rounded-pill bg-danger">Cancelled</span>
+            {% else %}
+              <span class="badge rounded-pill bg-secondary">{{ appt[4] }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="no-appointments">You have no upcoming appointments.</div>
+    {% endif %}
+
+    <!-- Past Appointments / History -->
+    <h4 class="mt-4">Past Appointments & Records</h4>
+    {% if past_appointments %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Doctor</th><th>Diagnosis</th><th>Prescription</th><th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for appt in past_appointments %}
+        <tr>
+          <td>{{ appt[2] }}</td>
+          <td>{{ appt[1] }}</td>
+          <td>{{ appt[5] or '-' }}</td>
+          <td>{{ appt[6] or '-' }}</td>
+          <td>{{ appt[7] or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="no-appointments">No historical records.</div>
+    {% endif %}
+</div>
+
+<!-- Appointment Booking Modal -->
+<div class="modal fade" id="bookModal" tabindex="-1" aria-labelledby="bookModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="/book_appointment">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookModalLabel">Book Appointment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label">Department</label>
+        <select class="form-select" name="department" required id="deptSelect">
+          <option value="">Select Department</option>
+          {% for dept in departments %}
+            <option value="{{ dept[0] }}">{{ dept[1] }}</option>
+          {% endfor %}
+        </select>
+        <label class="form-label mt-2">Doctor</label>
+        <select class="form-select" name="doctor" required id="doctorSelect">
+          <option value="">Select Doctor</option>
+        </select>
+        <label class="form-label mt-2">Date</label>
+        <input type="date" class="form-control" name="date" required>
+        <label class="form-label mt-2">Time</label>
+        <input type="time" class="form-control" name="time" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">Book</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal for doctors in departments -->
+<div class="modal fade" id="deptModal" tabindex="-1" aria-labelledby="deptModalLabel" aria-hidden="true">
+  <div class="modal-dialog"><div class="modal-content">
+     <div class="modal-header"><h5 class="modal-title" id="deptModalLabel">Doctors</h5>
+     <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+     <div class="modal-body" id="deptDoctorsBody">Loading...</div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Dynamic doctor filter for booking
+document.getElementById('deptSelect').addEventListener('change', function(){
+    let deptId = this.value;
+    let doctorSelect = document.getElementById('doctorSelect');
+    doctorSelect.innerHTML = '<option value="">Select Doctor</option>';
+    if (!deptId) return;
+    fetch('/api/doctors/' + deptId)
+      .then(response => response.json())
+      .then(data => {
+        for(let doc of data){
+            let opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.textContent = doc.name;
+            doctorSelect.appendChild(opt);
+        }
+      });
+});
+// Doctor info modal on department click
+document.querySelectorAll('.dept-link').forEach(function(elem){
+  elem.addEventListener('click', function() {
+    let id = this.getAttribute('data-dept');
+    fetch('/api/doctors/' + id)
+      .then(r=>r.json())
+      .then(data=>{
+        let html = "<ul>";
+        if(data.length === 0){
+          html += '<li>No doctors found</li>';
+        } else {
+          for(let doc of data){
+            html += `<li>${doc.name}</li>`;
+          }
+        }
+        html += "</ul>";
+        document.getElementById('deptDoctorsBody').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('deptModal')).show();
+      });
+  });
+});
+</script>
+</body>
+</html>

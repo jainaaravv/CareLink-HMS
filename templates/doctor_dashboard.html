@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Doctor Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(120deg, #fcb69f 0%, #ffecd2 100%);
+        }
+        .dashboard-card {
+            border-radius: 18px;
+            box-shadow: 0 2px 18px rgba(33,147,176,0.12);
+            margin-bottom: 2rem;
+        }
+        h2 {
+            color: #ff7746;
+        }
+        .table th {
+            background-color: #ff7746;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="dashboard-card p-4 bg-white">
+            <div class="d-flex align-items-center mb-4" style="gap:20px;">
+  <img src="{% if doctor_pfp %}/static/doctor_pfps/{{ doctor_pfp }}{% else %}https://ui-avatars.com/api/?name={{ doctor_name | urlencode }}&background=7e57c2&color=fff&size=80{% endif %}"
+       class="rounded-circle shadow" width="80" height="80" alt="Profile">
+  <div>
+    <h2 class="mb-1">{{ doctor_name }}</h2>
+    <div class="text-muted">Specialization: {{ doctor_spec }}</div>
+    <div class="text-muted">Contact: {{ doctor_contact }}</div>
+    <a href="/doctor_edit_profile" class="btn btn-sm btn-outline-info mt-2">Edit Profile</a>
+  </div>
+  <a href="/logout" class="btn btn-outline-secondary ms-auto">Logout</a>
+</div>
+
+            <h2 class="text-center mb-4">Welcome, Doctor</h2>
+            <h5>Upcoming Appointments</h5>
+            <table class="table table-hover align-middle mb-4">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for appt in appointments %}
+                    <tr>
+                        <td>{{ appt['patient_name'] }}</td>
+                        <td>{{ appt['date'] }}</td>
+                        <td>{{ appt['time'] }}</td>
+                        <td><a href="#" class="btn btn-primary btn-sm">View Details</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="dashboard-card p-4 bg-white">
+            <h5>Assigned Patients</h5>
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>{{ patient['name'] }}</td>
+                        <td><a href="#" class="btn btn-info btn-sm">View History</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
