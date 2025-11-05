@@ -131,12 +131,13 @@
                         <input type="text" class="form-control" name="password" required>
                         </div>
                         <div class="mb-3">
-                        <label for="specialization" class="form-label">Specialization</label>
+                        <label for="specialization" class="form-label">Department</label>
                         <select class="form-select" name="specialization" required>
-                        {% for dept in departments %}
-                          <option value="{{ dept[1] }}">{{ dept[1] }}</option>
-                        {% endfor %}
-                      </select>
+                          {% for dept in departments %}
+                            <option value="{{ dept[1] }}">{{ dept[1] }}</option>
+                          {% endfor %}
+                        </select>
+
 
                         </div>
                         <div class="mb-3">

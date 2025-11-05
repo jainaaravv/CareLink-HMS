@@ -68,13 +68,16 @@
     <!-- Profile Card -->
     <div class="d-flex align-items-center mb-4" style="gap:20px;">
       <img src="{% if patient_pfp %}/static/patient_pfps/{{ patient_pfp }}{% else %}https://ui-avatars.com/api/?name={{ patient_name | urlencode }}&background=5fa8d3&color=fff&size=80{% endif %}"
-    class="rounded-circle shadow" width="80" height="80" alt="Profile">
+     class="rounded-circle shadow" width="80" height="80" alt="Profile">
+
 
       <div>
         <h2 class="mb-1">{{ patient_name }}</h2>
         <div class="text-muted">Age: {{ patient_age }}</div>
         <div class="text-muted">Contact: {{ patient_contact }}</div>
         <a href="/edit_profile" class="btn btn-sm btn-outline-info mt-2">Edit Profile</a>
+        <a href="{{ url_for('book_appointment') }}" class="btn btn-primary">Book Appointment</a>
+
       </div>
       <a href="/logout" class="btn btn-outline-secondary ms-auto">Logout</a>
     </div>

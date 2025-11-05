@@ -23,18 +23,29 @@
 </head>
 <body>
     <div class="container py-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert" style="max-width:450px;margin:auto;margin-bottom:15px;">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
         <div class="dashboard-card p-4 bg-white">
             <div class="d-flex align-items-center mb-4" style="gap:20px;">
-  <img src="{% if doctor_pfp %}/static/doctor_pfps/{{ doctor_pfp }}{% else %}https://ui-avatars.com/api/?name={{ doctor_name | urlencode }}&background=7e57c2&color=fff&size=80{% endif %}"
-       class="rounded-circle shadow" width="80" height="80" alt="Profile">
-  <div>
-    <h2 class="mb-1">{{ doctor_name }}</h2>
-    <div class="text-muted">Specialization: {{ doctor_spec }}</div>
-    <div class="text-muted">Contact: {{ doctor_contact }}</div>
-    <a href="/doctor_edit_profile" class="btn btn-sm btn-outline-info mt-2">Edit Profile</a>
-  </div>
-  <a href="/logout" class="btn btn-outline-secondary ms-auto">Logout</a>
-</div>
+                <img src="{% if doctor_pfp %}/static/doctor_pfps/{{ doctor_pfp }}{% else %}https://ui-avatars.com/api/?name={{ doctor_name | urlencode }}&background=7e57c2&color=fff&size=80{% endif %}"
+                    class="rounded-circle shadow" width="80" height="80" alt="Profile">
+                <div>
+                    <h2 class="mb-1">{{ doctor_name }}</h2>
+                    <div class="text-muted">Specialization: {{ doctor_spec }}</div>
+                    <div class="text-muted">Contact: {{ doctor_contact }}</div>
+                    <a href="{{ url_for('doctor_edit_profile') }}" class="btn btn-sm btn-outline-info mt-2">Edit Profile</a>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary ms-auto">Logout</a>
+            </div>
 
             <h2 class="text-center mb-4">Welcome, Doctor</h2>
             <h5>Upcoming Appointments</h5>
@@ -53,7 +64,8 @@
                         <td>{{ appt['patient_name'] }}</td>
                         <td>{{ appt['date'] }}</td>
                         <td>{{ appt['time'] }}</td>
-                        <td><a href="#" class="btn btn-primary btn-sm">View Details</a></td>
+                        <td><a href="{{ url_for('doctor_appointment_detail', appt_id=appt['id']) }}" class="btn btn-primary btn-sm">View Details</a>
+</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -73,7 +85,8 @@
                     {% for patient in patients %}
                     <tr>
                         <td>{{ patient['name'] }}</td>
-                        <td><a href="#" class="btn btn-info btn-sm">View History</a></td>
+                        <td><a href="{{ url_for('doctor_patient_history', patient_id=patient['id']) }}" class="btn btn-info btn-sm">View History</a>
+</td>
                     </tr>
                     {% endfor %}
                 </tbody>

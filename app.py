@@ -130,6 +130,28 @@ def login():
             return "Invalid username or password"
     return render_template('login.html')
 
+@app.route('/register_doctor', methods=['GET', 'POST'])
+def register_doctor():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']  # Hash this in production!
+        specialization = request.form['specialization']
+        contact = request.form['contact']
+        db = get_db()
+        db.execute(
+            'INSERT INTO users (username, password, role) VALUES (?, ?, "doctor")',
+            (username, password)
+        )
+        user_id = db.execute('SELECT id FROM users WHERE username=?', (username,)).fetchone()[0]
+        db.execute(
+            'INSERT INTO doctors (id, name, specialization, contact) VALUES (?, ?, ?, ?)',
+            (user_id, username, specialization, contact)
+        )
+        db.commit()
+        flash("Doctor registered!","success")
+        return redirect(url_for('admin_dashboard'))
+    return render_template('register_doctor.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -159,17 +181,8 @@ def register():
     return render_template('register.html')
 
 
-@app.route('/doctor')
-def doctor_dashboard():
-    appointments = [
-        {'patient_name': 'John Doe', 'date': '2025-10-20', 'time': '10:00AM'},
-        {'patient_name': 'Jane Smith', 'date': '2025-10-21', 'time': '11:00AM'}
-    ]
-    patients = [
-        {'name': 'John Doe'},
-        {'name': 'Jane Smith'}
-    ]
-    return render_template('doctor_dashboard.html', appointments=appointments, patients=patients)
+
+
 
 
 
@@ -262,6 +275,30 @@ def add_appointment():
         flash('This slot is already booked for this doctor. Please choose another time.', 'danger')
     return redirect(url_for('admin_dashboard'))
 
+@app.route('/book_appointment', methods=['GET', 'POST'])
+def book_appointment():
+    if 'user_id' not in session or session.get('role') != 'patient':
+        return redirect(url_for('login'))
+
+    db = get_db()
+    # Show all available doctors
+    doctors = db.execute('SELECT id, name FROM doctors').fetchall()
+
+    if request.method == 'POST':
+        doctor_id = request.form['doctor_id']
+        date = request.form['date']
+        time = request.form['time']
+
+        db.execute(
+            'INSERT INTO appointments (doctor_id, patient_id, date, time, status) VALUES (?, ?, ?, ?, "Booked")',
+            (doctor_id, session['user_id'], date, time)
+        )
+        db.commit()
+        flash('Appointment booked successfully!', 'success')
+        return redirect(url_for('patient_dashboard'))
+
+    return render_template('book_appointment.html', doctors=doctors)
+
 @app.route('/edit_doctor/<int:doctor_id>', methods=['POST'])
 def edit_doctor(doctor_id):
     username = request.form['username']
@@ -284,6 +321,32 @@ def edit_doctor(doctor_id):
     except sqlite3.IntegrityError:
         flash('Username conflict on doctor update.', 'danger')
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/book_appointment', methods=['GET', 'POST'])
+def admin_book_appointment():
+    # Only allow if admin is logged in
+    if 'user_id' not in session or session.get('role') != 'admin':
+        return redirect(url_for('login'))
+
+    db = get_db()
+    # Fetch all doctors and all patients for the dropdowns
+    doctors = db.execute('SELECT id, name FROM doctors').fetchall()
+    patients = db.execute('SELECT id, name FROM patients').fetchall()
+
+    if request.method == 'POST':
+        doctor_id = request.form['doctor_id']
+        patient_id = request.form['patient_id']
+        date = request.form['date']
+        time = request.form['time']
+        db.execute(
+            'INSERT INTO appointments (doctor_id, patient_id, date, time, status) VALUES (?, ?, ?, ?, "Booked")',
+            (doctor_id, patient_id, date, time)
+        )
+        db.commit()
+        flash('Appointment booked successfully!', 'success')
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('admin_book_appointment.html', doctors=doctors, patients=patients)
 
 
 @app.route('/delete_doctor/<int:doctor_id>', methods=['POST'])
@@ -427,6 +490,110 @@ def export_appointments():
     cw.writerows(appointments)
     output = si.getvalue()
     return Response(output, mimetype="text/csv", headers={"Content-Disposition":"attachment;filename=appointments.csv"})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect (url_for('home'))
+
+
+@app.route('/doctor')
+def doctor_dashboard():
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    db = get_db()
+
+    # Doctor info
+    doctor = db.execute('SELECT name, specialization, contact FROM doctors WHERE id = ?', (user_id,)).fetchone()
+    doctor_name = doctor[0] if doctor else ''
+    doctor_spec = doctor[1] if doctor else ''
+    doctor_contact = doctor[2] if doctor else ''
+    doctor_pfp = None # implement/upload if you add photo support
+
+    # Upcoming appointments
+    appointments = db.execute('''
+        SELECT a.id, u.username as patient_name, a.date, a.time
+        FROM appointments a
+        JOIN users u ON a.patient_id = u.id
+        WHERE a.doctor_id = ? AND a.status = 'Booked'
+        ORDER BY a.date, a.time
+    ''', (user_id,)).fetchall()
+    appointments = [dict(id=r[0], patient_name=r[1], date=r[2], time=r[3]) for r in appointments]
+
+    # Assigned patients = distinct patients with at least 1 appointment
+    patients = db.execute('''
+        SELECT DISTINCT p.id, p.name
+        FROM patients p
+        JOIN appointments a ON a.patient_id = p.id
+        WHERE a.doctor_id = ?
+    ''', (user_id,)).fetchall()
+    patients = [dict(id=r[0], name=r[1]) for r in patients]
+
+    return render_template('doctor_dashboard.html',
+        doctor_name=doctor_name, doctor_spec=doctor_spec, doctor_contact=doctor_contact,
+        doctor_pfp=doctor_pfp,
+        appointments=appointments, patients=patients
+    )
+
+@app.route("/doctor_edit_profile", methods=["GET", "POST"])
+def doctor_edit_profile():
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return redirect(url_for('login'))
+    db = get_db()
+    user_id = session['user_id']
+    doctor = db.execute('SELECT name, specialization, contact FROM doctors WHERE id=?', (user_id,)).fetchone()
+    if request.method == "POST":
+        new_name = request.form['name']
+        new_spec = request.form['specialization']
+        new_contact = request.form['contact']
+        db.execute('UPDATE doctors SET name=?, specialization=?, contact=? WHERE id=?', (new_name, new_spec, new_contact, user_id))
+        db.execute('UPDATE users SET username=? WHERE id=?', (new_name, user_id))
+        db.commit()
+        flash('Profile updated!', 'success')
+        return redirect(url_for('doctor_dashboard'))
+    return render_template("doctor_edit_profile.html", doctor=doctor)
+
+@app.route("/doctor/appointment/<int:appt_id>", methods=["GET", "POST"])
+def doctor_appointment_detail(appt_id):
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return redirect(url_for('login'))
+    db = get_db()
+    if request.method == "POST":
+        diagnosis = request.form.get("diagnosis")
+        prescription = request.form.get("prescription")
+        notes = request.form.get("notes")
+        status = request.form.get("status")
+        db.execute(
+            "UPDATE appointments SET diagnosis=?, prescription=?, notes=?, status=? WHERE id=?",
+            (diagnosis, prescription, notes, status, appt_id)
+        )
+        db.commit()
+        flash("Appointment updated!", "success")
+        return redirect(url_for('doctor_dashboard'))      # Redirect to doctor dashboard after update
+    appt = db.execute('''
+        SELECT a.id, u.username as patient_name, a.date, a.time, a.status, a.diagnosis, a.prescription, a.notes
+        FROM appointments a
+        JOIN users u ON a.patient_id = u.id
+        WHERE a.id = ?
+    ''', (appt_id,)).fetchone()
+    return render_template("doctor_appointment_detail.html", appt=appt)
+
+
+
+@app.route("/doctor/patient/<int:patient_id>/history")
+def doctor_patient_history(patient_id):
+    if 'user_id' not in session or session.get('role') != 'doctor':
+        return redirect(url_for('login'))
+    db = get_db()
+    appts = db.execute('''
+        SELECT date, time, status, diagnosis, prescription, notes
+        FROM appointments
+        WHERE patient_id = ?
+        ORDER BY date DESC, time DESC
+    ''', (patient_id,)).fetchall()
+    patient = db.execute('SELECT name FROM patients WHERE id=?', (patient_id,)).fetchone()
+    return render_template("doctor_patient_history.html", appts=appts, patient=patient)
 
 
 

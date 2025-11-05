@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Appointment Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(120deg, #fcb69f 0%, #ffecd2 100%); min-height:100vh; }
+        .main-card { max-width:600px; margin:40px auto; background:#fff; border-radius:18px; box-shadow:0 4px 24px rgba(44,62,80,0.11); padding:42px 28px; }
+        h2 { color:#ff7746; }
+        dt { font-weight:600; }
+    </style>
+</head>
+<body>
+  <div class="main-card">
+    <h2>Appointment Details</h2>
+    <form method="POST">
+      <dl class="row mb-0">
+        <dt class="col-4">Patient</dt>
+        <dd class="col-8">{{ appt[1] }}</dd>
+        <dt class="col-4">Date</dt>
+        <dd class="col-8">{{ appt[2] }}</dd>
+        <dt class="col-4">Time</dt>
+        <dd class="col-8">{{ appt[3] }}</dd>
+        <dt class="col-4">Status</dt>
+        <dd class="col-8">
+          <select class="form-select" name="status" required>
+              <option value="Booked" {% if appt[4]=="Booked" %}selected{% endif %}>Booked</option>
+              <option value="Completed" {% if appt[4]=="Completed" %}selected{% endif %}>Completed</option>
+              <option value="Cancelled" {% if appt[4]=="Cancelled" %}selected{% endif %}>Cancelled</option>
+          </select>
+        </dd>
+        <dt class="col-4">Diagnosis</dt>
+        <dd class="col-8">
+          <textarea name="diagnosis" class="form-control" rows="2">{{ appt[5] or "" }}</textarea>
+        </dd>
+        <dt class="col-4">Prescription</dt>
+        <dd class="col-8">
+          <textarea name="prescription" class="form-control" rows="2">{{ appt[6] or "" }}</textarea>
+        </dd>
+        <dt class="col-4">Notes</dt>
+        <dd class="col-8">
+          <textarea name="notes" class="form-control" rows="2">{{ appt[7] or "" }}</textarea>
+        </dd>
+      </dl>
+      <button type="submit" class="btn btn-success mt-2">Update Appointment</button>
+      <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-outline-secondary mt-2">Back to Dashboard</a>
+    </form>
+  </div>
+</body>
+</html>
