@@ -472,23 +472,62 @@
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-function filterDashboard() {
-  var input = document.getElementById("searchInput").value.toLowerCase();
 
-  function filterTable(selector) {
-    var rows = document.querySelectorAll(selector + " tbody tr");
-    rows.forEach(function(row) {
-      var text = row.textContent.toLowerCase();
-      row.style.display = text.indexOf(input) > -1 ? "" : "none";
-    });
+<!-- Stats Button -->
+<div class="text-center mt-4">
+  <button id="showStatsBtn" class="btn btn-primary">View Stats</button>
+</div>
+
+<!-- Chart Container (Initially Hidden) -->
+<div id="statsChartContainer" class="dashboard-card p-4 bg-white mt-4" style="display:none;">
+  <h5 class="mb-3">Appointment Status Overview</h5>
+  <canvas id="apptStatusChart" height="150"></canvas>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.getElementById('showStatsBtn').addEventListener('click', function() {
+  
+  if (!window.statsChartLoaded) {
+    fetch('/admin/appointment_stats')
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('statsChartContainer').style.display = 'block';
+        const ctx = document.getElementById('apptStatusChart').getContext('2d');
+
+        new Chart(ctx, {
+          type: 'bar',
+          data: {   
+            labels: data.labels,
+            datasets: [{
+              label: 'Number of Appointments',
+              data: data.counts,   
+              backgroundColor: ['#0d6efd', '#198754', '#dc3545']
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 }
+              }
+            },
+            plugins: {
+              legend: { display: false }
+            }
+          }
+        });
+
+        window.statsChartLoaded = true;
+      });
+  } else {
+    document.getElementById('statsChartContainer').style.display = 'block';
   }
 
-  filterTable(".doctor-table");
-  filterTable(".patient-table");
-  filterTable(".appointment-table");
-}
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+});
 </script>
-
 </body>
 </html>

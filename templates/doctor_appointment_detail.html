@@ -17,10 +17,17 @@
       <dl class="row mb-0">
         <dt class="col-4">Patient</dt>
         <dd class="col-8">{{ appt[1] }}</dd>
+
         <dt class="col-4">Date</dt>
-        <dd class="col-8">{{ appt[2] }}</dd>
+        <dd class="col-8">
+          <input type="date" name="date" class="form-control" required value="{{ appt[2] }}">
+        </dd>
+
         <dt class="col-4">Time</dt>
-        <dd class="col-8">{{ appt[3] }}</dd>
+        <dd class="col-8">
+          <input type="time" name="time" class="form-control" required value="{{ appt[3] }}">
+        </dd>
+
         <dt class="col-4">Status</dt>
         <dd class="col-8">
           <select class="form-select" name="status" required>
@@ -42,8 +49,8 @@
           <textarea name="notes" class="form-control" rows="2">{{ appt[7] or "" }}</textarea>
         </dd>
       </dl>
-      <button type="submit" class="btn btn-success mt-2">Update Appointment</button>
-      <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-outline-secondary mt-2">Back to Dashboard</a>
+      <button type="submit" class="btn btn-success mt-3">Update Appointment</button>
+      <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-outline-secondary mt-3 ms-2">Back to Dashboard</a>
     </form>
   </div>
 </body>

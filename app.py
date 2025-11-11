@@ -7,6 +7,7 @@ import io
 import os
 from werkzeug.utils import secure_filename
 from datetime import date, timedelta
+from flask import current_app
 
 app = Flask(__name__)  
 
@@ -217,6 +218,19 @@ def add_patient():
         return redirect(url_for('admin_dashboard'))
     except sqlite3.IntegrityError:
         return "Patient with that username already exists!"
+
+@app.route('/api/doctor_availability/<int:doctor_id>')
+def api_doctor_availability(doctor_id):
+    from datetime import date, timedelta
+    db = get_db()
+    next_week = [(date.today() + timedelta(days=i)).isoformat() for i in range(7)]
+    results = db.execute(
+        f"SELECT date, slot_morning, slot_afternoon, slot_evening FROM availabilities WHERE doctor_id=? AND date IN ({','.join(['?']*7)}) ORDER BY date ASC",
+        (doctor_id, *next_week)
+    ).fetchall()
+    avail_map = {row[0]: row[1:] for row in results}
+    return jsonify({d: avail_map.get(d, ["Unavailable", "Unavailable", "Unavailable"]) for d in next_week})
+
     
 @app.route('/api/doctors/<int:dept_id>')
 def api_get_doctors(dept_id):
@@ -278,7 +292,6 @@ def add_appointment():
 
 @app.route('/book_appointment', methods=['GET', 'POST'])
 def book_appointment():
-    print("book_appointment route hit")  # Diagnostic
     if 'user_id' not in session or session.get('role') != 'patient':
         print("Not logged in or wrong role")
         return redirect(url_for('login'))
@@ -533,13 +546,15 @@ def doctor_dashboard():
         return redirect(url_for('login'))
     user_id = session['user_id']
     db = get_db()
-
-    # Doctor info
-    doctor = db.execute('SELECT name, specialization, contact FROM doctors WHERE id = ?', (user_id,)).fetchone()
+    doctor = db.execute('SELECT name, specialization, contact, photo FROM doctors WHERE id = ?', (user_id,)).fetchone()
     doctor_name = doctor[0] if doctor else ''
     doctor_spec = doctor[1] if doctor else ''
     doctor_contact = doctor[2] if doctor else ''
-    doctor_pfp = None # implement/upload if you add photo support
+    doctor_pfp = doctor[3] if (doctor and len(doctor) > 3) else None  # Now gets your photo filename
+
+
+  
+
 
     # Upcoming appointments
     appointments = db.execute('''
@@ -585,23 +600,46 @@ def doctor_dashboard():
         appointments=appointments, patients=patients,slots_display=slots_display
     )
 
+
+
 @app.route("/doctor_edit_profile", methods=["GET", "POST"])
 def doctor_edit_profile():
     if 'user_id' not in session or session.get('role') != 'doctor':
         return redirect(url_for('login'))
     db = get_db()
     user_id = session['user_id']
-    doctor = db.execute('SELECT name, specialization, contact FROM doctors WHERE id=?', (user_id,)).fetchone()
+    # Select photo in the query (index 3)
+    doctor = db.execute('SELECT name, specialization, contact, photo FROM doctors WHERE id=?', (user_id,)).fetchone()
+    # doctor = (name, specialization, contact, photo) as a tuple
+
     if request.method == "POST":
         new_name = request.form['name']
         new_spec = request.form['specialization']
         new_contact = request.form['contact']
-        db.execute('UPDATE doctors SET name=?, specialization=?, contact=? WHERE id=?', (new_name, new_spec, new_contact, user_id))
+
+        # ------ FIX: Use doctor[3] for photo ------
+        photo_filename = doctor[3] if doctor[3] else None
+        if 'photo' in request.files:
+            photo_file = request.files['photo']
+            if photo_file and photo_file.filename != '':
+                filename_secure = secure_filename(photo_file.filename)
+                photo_filename = f"{user_id}_{filename_secure}"
+                upload_folder = os.path.join(current_app.root_path, 'static', 'doctor_pfps')
+                if not os.path.exists(upload_folder):
+                    os.makedirs(upload_folder)
+                photo_file.save(os.path.join(upload_folder, photo_filename))
+
+        db.execute('UPDATE doctors SET name=?, specialization=?, contact=?, photo=? WHERE id=?',
+                   (new_name, new_spec, new_contact, photo_filename, user_id))
         db.execute('UPDATE users SET username=? WHERE id=?', (new_name, user_id))
         db.commit()
         flash('Profile updated!', 'success')
         return redirect(url_for('doctor_dashboard'))
+
     return render_template("doctor_edit_profile.html", doctor=doctor)
+
+
+    
 
 @app.route("/doctor/appointment/<int:appt_id>", methods=["GET", "POST"])
 def doctor_appointment_detail(appt_id):
@@ -609,25 +647,47 @@ def doctor_appointment_detail(appt_id):
         return redirect(url_for('login'))
     db = get_db()
     if request.method == "POST":
+        date = request.form.get("date")
+        time = request.form.get("time")
         diagnosis = request.form.get("diagnosis")
         prescription = request.form.get("prescription")
         notes = request.form.get("notes")
         status = request.form.get("status")
         db.execute(
-            "UPDATE appointments SET diagnosis=?, prescription=?, notes=?, status=? WHERE id=?",
-            (diagnosis, prescription, notes, status, appt_id)
+            "UPDATE appointments SET date=?, time=?, diagnosis=?, prescription=?, notes=?, status=? WHERE id=?",
+            (date, time, diagnosis, prescription, notes, status, appt_id)
         )
         db.commit()
         flash("Appointment updated!", "success")
-        return redirect(url_for('doctor_dashboard'))      # Redirect to doctor dashboard after update
+        return redirect(url_for('doctor_dashboard'))  # Redirect to doctor dashboard after update
+
     appt = db.execute('''
         SELECT a.id, u.username as patient_name, a.date, a.time, a.status, a.diagnosis, a.prescription, a.notes
         FROM appointments a
         JOIN users u ON a.patient_id = u.id
         WHERE a.id = ?
     ''', (appt_id,)).fetchone()
+
     return render_template("doctor_appointment_detail.html", appt=appt)
 
+
+@app.route('/admin/appointment_stats')
+def admin_appointment_stats():
+    db = get_db()
+    
+    stats = db.execute('''
+        SELECT status, COUNT(*) as count
+        FROM appointments
+        GROUP BY status
+    ''').fetchall()
+    
+    data = {row[0]: row[1] for row in stats}
+    
+    # Ensure keys for all statuses, default 0
+    labels = ['Booked', 'Completed', 'Cancelled']
+    counts = [data.get(status, 0) for status in labels]
+    
+    return jsonify({'labels': labels, 'counts': counts})
 
 
 @app.route("/doctor/patient/<int:patient_id>/history")
