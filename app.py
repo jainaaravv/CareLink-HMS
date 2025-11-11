@@ -6,8 +6,9 @@ import csv
 import io
 import os
 from werkzeug.utils import secure_filename
+from datetime import date, timedelta
 
-app = Flask(__name__)  # <-- Only do this ONCE!
+app = Flask(__name__)  
 
 UPLOAD_FOLDER = 'static/patient_pfps'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -277,27 +278,56 @@ def add_appointment():
 
 @app.route('/book_appointment', methods=['GET', 'POST'])
 def book_appointment():
+    print("book_appointment route hit")  # Diagnostic
     if 'user_id' not in session or session.get('role') != 'patient':
+        print("Not logged in or wrong role")
         return redirect(url_for('login'))
 
     db = get_db()
-    # Show all available doctors
-    doctors = db.execute('SELECT id, name FROM doctors').fetchall()
+    
+    try:
+        doctors = db.execute('SELECT id, name FROM doctors').fetchall()
+        print("Doctors loaded:", doctors)
+    except Exception as e:
+        # If there is a DB error, print and show it immediately!
+        print("ERROR LOADING DOCTORS:", e)
+        return f"Error loading doctors: {e}"
 
     if request.method == 'POST':
-        doctor_id = request.form['doctor_id']
-        date = request.form['date']
-        time = request.form['time']
+        doctor_id = request.form.get('doctor_id')
+        date = request.form.get('date')
+        time = request.form.get('time')
+        print("POST ", doctor_id, date, time)
 
-        db.execute(
-            'INSERT INTO appointments (doctor_id, patient_id, date, time, status) VALUES (?, ?, ?, ?, "Booked")',
-            (doctor_id, session['user_id'], date, time)
-        )
-        db.commit()
-        flash('Appointment booked successfully!', 'success')
-        return redirect(url_for('patient_dashboard'))
+        if not doctor_id or not date or not time:
+            flash("All fields are required, please try again.", "danger")
+            return render_template('book_appointment.html', doctors=doctors)
+        try:
+            db.execute(
+                'INSERT INTO appointments (doctor_id, patient_id, date, time, status) VALUES (?, ?, ?, ?, ?)',
+                (doctor_id, session['user_id'], date, time, 'Booked')
+            )
+            db.commit()
+            flash('Appointment booked successfully!', 'success')
+            return redirect(url_for('patient_dashboard'))
+        except Exception as e:
+            print("ERROR INSERT:", e)
+            flash(f'Could not book appointment: {e}', 'danger')
+            return render_template('book_appointment.html', doctors=doctors)
 
+    # GET: always render the form
     return render_template('book_appointment.html', doctors=doctors)
+
+
+@app.route('/delete_appointment/<int:appt_id>', methods=['POST'])
+def delete_appointment(appt_id):
+    db = get_db()
+    db.execute('DELETE FROM appointments WHERE id=?', (appt_id,))
+    db.commit()
+    flash('Appointment deleted successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+
 
 @app.route('/edit_doctor/<int:doctor_id>', methods=['POST'])
 def edit_doctor(doctor_id):
@@ -520,6 +550,25 @@ def doctor_dashboard():
         ORDER BY a.date, a.time
     ''', (user_id,)).fetchall()
     appointments = [dict(id=r[0], patient_name=r[1], date=r[2], time=r[3]) for r in appointments]
+    # 7-day availability retrieval
+    today_str = date.today().isoformat()
+    next_week = [(date.today() + timedelta(days=offset)).isoformat() for offset in range(7)]
+    availabilities = db.execute(
+        '''
+        SELECT date, slot_morning, slot_afternoon, slot_evening
+        FROM availabilities
+        WHERE doctor_id=? AND date IN ({})
+        ORDER BY date ASC
+        '''.format(",".join("?"*len(next_week))),
+        (user_id, *next_week)
+    ).fetchall()
+
+    # Fill missing days (if any day has no entry, show as 'Unavailable')
+    avail_dict = {r[0]: r[1:] for r in availabilities}
+    slots_display = []
+    for d in next_week:
+        slots = avail_dict.get(d, ("Unavailable", "Unavailable", "Unavailable"))
+        slots_display.append((d, *slots))
 
     # Assigned patients = distinct patients with at least 1 appointment
     patients = db.execute('''
@@ -533,7 +582,7 @@ def doctor_dashboard():
     return render_template('doctor_dashboard.html',
         doctor_name=doctor_name, doctor_spec=doctor_spec, doctor_contact=doctor_contact,
         doctor_pfp=doctor_pfp,
-        appointments=appointments, patients=patients
+        appointments=appointments, patients=patients,slots_display=slots_display
     )
 
 @app.route("/doctor_edit_profile", methods=["GET", "POST"])

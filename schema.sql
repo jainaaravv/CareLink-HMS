@@ -8,11 +8,12 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Doctor profiles
 CREATE TABLE IF NOT EXISTS doctors (
-    id INTEGER PRIMARY KEY,  -- links to users.id
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    specialization TEXT NOT NULL, -- should match departments.name
+    specialization TEXT NOT NULL,  -- this will hold the department name
     contact TEXT
 );
+
 
 -- Patient profiles
 CREATE TABLE IF NOT EXISTS patients (
@@ -55,3 +56,13 @@ CREATE TABLE IF NOT EXISTS appointments (
 -- Ensure no double-booking for doctor on same date+time
 CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_appointment
     ON appointments(doctor_id, date, time);
+    
+CREATE TABLE IF NOT EXISTS availabilities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doctor_id INTEGER,
+    date TEXT,
+    slot_morning TEXT,   -- "available" or "unavailable"
+    slot_afternoon TEXT,
+    slot_evening TEXT,
+    FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+);

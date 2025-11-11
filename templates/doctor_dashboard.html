@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -73,6 +74,7 @@
         </div>
         
         <div class="dashboard-card p-4 bg-white">
+
             <h5>Assigned Patients</h5>
             <table class="table table-hover align-middle">
                 <thead>
@@ -92,6 +94,45 @@
                 </tbody>
             </table>
         </div>
+         <h5 class="mt-4">Your 7-Day Availability</h5>
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr>
+      <th>Date</th>
+      <th>Morning<br><small>(8am-12pm)</small></th>
+      <th>Afternoon<br><small>(1pm-5pm)</small></th>
+      <th>Evening<br><small>(6pm-9pm)</small></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in slots_display %}
+    <tr>
+      <td>{{ row[0] }}</td>
+      <td>
+        {% if row[1]=="available" %}
+          <span class="badge bg-success">Available</span>
+        {% else %}
+          <span class="badge bg-danger">Unavailable</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if row[2]=="available" %}
+          <span class="badge bg-success">Available</span>
+        {% else %}
+          <span class="badge bg-danger">Unavailable</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if row[3]=="available" %}
+          <span class="badge bg-success">Available</span>
+        {% else %}
+          <span class="badge bg-danger">Unavailable</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
     </div>
 </body>
 </html>
