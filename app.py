@@ -550,7 +550,8 @@ def doctor_dashboard():
     doctor_name = doctor[0] if doctor else ''
     doctor_spec = doctor[1] if doctor else ''
     doctor_contact = doctor[2] if doctor else ''
-    doctor_pfp = doctor[3] if (doctor and len(doctor) > 3) else None  # Now gets your photo filename
+    doctor_pfp = doctor[3] if (doctor and len(doctor) > 3) else None
+
 
 
   
@@ -708,5 +709,5 @@ def doctor_patient_history(patient_id):
 
 
 if __name__ == '__main__':
-     #init_db()   # UNCOMMENT and run ONCE if you ever need to recreate tables!
+     #init_db()   # running this only when new db is to be created
      app.run(debug=True)
