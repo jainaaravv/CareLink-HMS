@@ -129,7 +129,7 @@ def login():
             else:
                 return redirect(url_for('patient_dashboard'))
         else:
-            return "Invalid username or password"
+           return render_template('login.html', error="Invalid username or password")
     return render_template('login.html')
 
 @app.route('/register_doctor', methods=['GET', 'POST'])
@@ -302,7 +302,7 @@ def book_appointment():
         doctors = db.execute('SELECT id, name FROM doctors').fetchall()
         print("Doctors loaded:", doctors)
     except Exception as e:
-        # If there is a DB error, print and show it immediately!
+        # If there is a db error, print and show it immediately!
         print("ERROR LOADING DOCTORS:", e)
         return f"Error loading doctors: {e}"
 
@@ -406,6 +406,7 @@ def edit_patient(patient_id):
     username = request.form['username']
     contact = request.form['contact']
     db = get_db()
+
     # Check for another patient with this username
     exists = db.execute(
         'SELECT id FROM users WHERE username = ? AND id != ? AND role = "patient"',
