@@ -327,7 +327,7 @@
     </tbody>
 </table>
 
-            <!-- Render all patient modals just after table -->
+            <!-- Rendering all patient modals just after table -->
             {% for pat in patients %}
             <div class="modal fade" id="editPatientModal{{pat[0]}}" tabindex="-1" aria-labelledby="editPatientModalLabel{{pat[0]}}" aria-hidden="true">
               <div class="modal-dialog">
@@ -497,7 +497,7 @@ document.getElementById('showStatsBtn').addEventListener('click', function() {
         const ctx = document.getElementById('apptStatusChart').getContext('2d');
 
         new Chart(ctx, {
-          type: 'bar',
+          type: 'line',
           data: {   
             labels: data.labels,
             datasets: [{

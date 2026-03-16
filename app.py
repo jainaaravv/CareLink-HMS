@@ -229,7 +229,7 @@ def api_doctor_availability(doctor_id):
         (doctor_id, *next_week)
     ).fetchall()
     avail_map = {row[0]: row[1:] for row in results}
-    return jsonify({d: avail_map.get(d, ["Unavailable", "Unavailable", "Unavailable"]) for d in next_week})
+    return jsonify({d: avail_map.get(d, ["available", "available", "available"]) for d in next_week})
 
     
 @app.route('/api/doctors/<int:dept_id>')
@@ -584,7 +584,7 @@ def doctor_dashboard():
     avail_dict = {r[0]: r[1:] for r in availabilities}
     slots_display = []
     for d in next_week:
-        slots = avail_dict.get(d, ("Unavailable", "Unavailable", "Unavailable"))
+        slots = avail_dict.get(d, ("available", "available", "available"))
         slots_display.append((d, *slots))
 
     # Assigned patients = distinct patients with at least 1 appointment
