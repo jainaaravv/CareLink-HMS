@@ -81,4 +81,4 @@ The SQLite database (`hospital.db`) adheres to a normalized operational schema:
 - **Foreign Constraints:** Relies heavily on SQLite foreign keys to maintain data integrity when related records are modified.
 
 ---
-*Created as a replica of a Hospital Management System.*
+
